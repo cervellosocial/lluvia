@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Torneo Tenis Dobles - Sorteo Rotativo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Configuración personalizada de Tailwind para colores de Tenis -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        court: {
+                            DEFAULT: '#1b5e20', // Verde pista
+                            dark: '#0d3b13',
+                            light: '#2e7d32',
+                            blue: '#1565c0', // Azul pista rápida alternativa
+                        },
+                        ball: {
+                            DEFAULT: '#ccff00', // Amarillo pelota tenis
+                            hover: '#b3e600',
+                            dark: '#99c200'
+                        },
+                        clay: '#c65102'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Estilos personalizados -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Textura estilo pista de tenis */
+        .court-bg {
+            background-color: #1e4620;
+            background-image: radial-gradient(#2e7d32 1px, transparent 0);
+            background-size: 16px 16px;
+        }
+
+        .court-card {
+            background: linear-gradient(135deg, #1b5e20 0%, #0d3b13 100%);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Líneas de pista */
+        .court-lines {
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            position: relative;
+        }
+
+        .court-lines::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Botón estilo pelota de tenis */
+        .btn-ball {
+            background-color: #ccff00;
+            color: #0d3b13;
+            font-weight: 800;
+            box-shadow: 0 4px 14px rgba(204, 255, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .btn-ball:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(204, 255, 0, 0.3);
+        }
+
+        /* Scrollbar suave */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(204, 255, 0, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(204, 255, 0, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-16 md:pb-0">
+
+    <!-- Encabezado Principal -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-full bg-ball flex items-center justify-center text-court-dark font-black text-xl shadow-lg">
+                    🎾
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-wide text-white flex items-center gap-1.5">
+                        TieBreak Doubles
+                    </h1>
+                    <p class="text-xs text-slate-400">Torneo Rotativo de Dobles</p>
+                </div>
+            </div>
+            <button id="btn-reset-all" title="Reiniciar Torneo" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenido Principal (Navegación por Pestañas) -->
+    <main class="max-w-md mx-auto w-full flex-grow p-4 space-y-4">
+
+        <!-- Pestaña 1: Configuración de Jugadores -->
+        <section id="sec-players" class="tab-content space-y-4">
+            <!-- Formulario Añadir Jugador -->
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-xl">
+                <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                    <span>Jugadores Inscritos</span>
+                    <span id="player-count-badge" class="bg-ball text-court-dark px-2 py-0.5 rounded-full text-xs font-black">0</span>
+                </h2>
+                
+                <form id="add-player-form" class="flex gap-2 mb-3">
+                    <input type="text" id="player-name-input" placeholder="Nombre del jugador..." 
+                           class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-ball text-white placeholder-slate-500">
+                    <button type="submit" class="btn-ball px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1 shrink-0">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Añadir
+                    </button>
+                </form>
+
+                <!-- Sugerencia rápido -->
+                <div class="flex flex-wrap gap-1.5 mb-2">
+                    <button type="button" onclick="loadSamplePlayers(8)" class="text-[11px] bg-slate-700/50 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-600/40 transition-colors">
+                        + Cargar 8 Jugadores Ejemplo
+                    </button>
+                    <button type="button" onclick="loadSamplePlayers(12)" class="text-[11px] bg-slate-700/50 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-600/40 transition-colors">
+                        + Cargar 12
+                    </button>
+                    <button type="button" onclick="clearAllPlayers()" class="text-[11px] bg-red-950/40 hover:bg-red-900/40 text-red-300 px-2.5 py-1 rounded-lg border border-red-800/30 transition-colors ml-auto">
+                        Vaciar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Jugadores (Chips) -->
+            <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-4 min-h-[140px]">
+                <div id="players-list" class="flex flex-wrap gap-2">
+                    <!-- Dinámico por JS -->
+                </div>
+                <div id="empty-players-msg" class="text-center py-8 text-slate-500 text-sm">
+                    <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>
+                    Añade al menos 4 jugadores para comenzar el torneo.
+                </div>
+            </div>
+
+            <!-- Advertencias de Configuración -->
+            <div id="status-info-box" class="p-3.5 rounded-xl border text-xs leading-relaxed hidden">
+                <!-- Información contextual -->
+            </div>
+        </section>
+
+        <!-- Pestaña 2: Partidos de la Ronda Actual -->
+        <section id="sec-match" class="tab-content space-y-4 hidden">
+            <!-- Panel Acción de Sorteo -->
+            <div class="flex flex-col gap-3">
+                <button id="btn-draw" class="btn-ball w-full py-3.5 rounded-2xl text-base tracking-wide uppercase flex items-center justify-center gap-2 shadow-lg">
+                    <i data-lucide="dices" class="w-5 h-5"></i>
+                    <span id="btn-draw-text">Sortear Ronda 1</span>
+                </button>
+            </div>
+
+            <!-- Listado de Pistas y Enfrentamientos -->
+            <div id="courts-container" class="space-y-4">
+                <div class="text-center py-12 text-slate-500 text-sm bg-slate-800/30 rounded-2xl border border-slate-800/60">
+                    <i data-lucide="trophy" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+                    Presiona "Sortear" para generar los partidos de la ronda sin repetir parejas.
+                </div>
+            </div>
+
+            <!-- Jugadores en Descanso (Si N no es múltiplo de 4) -->
+            <div id="resting-container" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3.5">
+                <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="coffee" class="w-4 h-4"></i> Descansan esta ronda
+                </h3>
+                <div id="resting-players-list" class="flex flex-wrap gap-2">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Pestaña 3: Historial y Combinaciones -->
+        <section id="sec-history" class="tab-content space-y-4 hidden">
+            <!-- Selector Sub-vistas -->
+            <div class="flex bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                <button id="btn-sub-rounds" onclick="switchHistoryTab('rounds')" class="flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all">Rondas Jugadas</button>
+                <button id="btn-sub-pairs" onclick="switchHistoryTab('pairs')" class="flex-1 py-1.5 rounded-lg text-slate-400 transition-all">Matriz de Parejas</button>
+            </div>
+
+            <!-- Vista 1: Rondas Antiguas -->
+            <div id="history-rounds-view" class="space-y-3">
+                <div id="history-rounds-list" class="space-y-3">
+                    <div class="text-center py-8 text-slate-500 text-sm">Aún no se han jugado rondas.</div>
+                </div>
+            </div>
+
+            <!-- Vista 2: Matriz de Parejas que han jugado juntas -->
+            <div id="history-pairs-view" class="hidden space-y-3">
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3 text-xs text-slate-300">
+                    <p class="font-semibold text-ball mb-1">Control de Repeticiones</p>
+                    <p class="text-slate-400">Verde indica pareja que ya ha jugado junta. Se evitan repeticiones hasta agotar todas las posibilidades.</p>
+                </div>
+                <div id="pairs-matrix-container" class="overflow-x-auto bg-slate-800/40 rounded-2xl border border-slate-800 p-2">
+                    <!-- Tabla de matriz por JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Navegación Inferior Móvil (Barra Fija) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 z-50">
+        <div class="max-w-md mx-auto flex justify-around p-2">
+            <button onclick="switchTab('players')" id="nav-players" class="nav-btn flex flex-col items-center gap-1 p-2 text-ball">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Jugadores</span>
+            </button>
+            <button onclick="switchTab('match')" id="nav-match" class="nav-btn flex flex-col items-center gap-1 p-2 text-slate-400">
+                <i data-lucide="swords" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Sorteo / Pistas</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center gap-1 p-2 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Historial</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal Notificación/Mensajes Customizado (Sin alert) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl transform scale-95 transition-transform duration-200" id="modal-box">
+            <div id="modal-icon" class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 id="modal-title" class="font-bold text-white text-base">Atención</h3>
+                <p id="modal-message" class="text-xs text-slate-300 mt-1">Mensaje de alerta</p>
+            </div>
+            <button onclick="closeModal()" class="btn-ball w-full py-2 rounded-xl text-xs font-bold uppercase">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Script Lógico Completo de la App -->
+    <script>
+        // --- ESTADO GLOBAL Y PERSISTENCIA DE LA APP ---
+        let appState = {
+            players: [], // Lista de { id, name, restCount }
+            roundsHistory: [], // Array de rondas: { roundNumber, matches: [{pair1: [id, id], pair2: [id, id]}], resting: [id] }
+            playedPairs: {}, // Objeto clave 'id1-id2' => true (ordenados id1 < id2)
+            currentRoundIndex: 0
+        };
+
+        // --- INICIALIZACIÓN DE LA APLICACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            lucide.createIcons();
+            renderPlayersList();
+            updateUIState();
+
+            // Form Submit Listener
+            document.getElementById('add-player-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('player-name-input');
+                addPlayer(input.value);
+                input.value = '';
+                input.focus();
+            });
+
+            // Reset Button
+            document.getElementById('btn-reset-all').addEventListener('click', () => {
+                showModal('¿Reiniciar Torneo?', 'Se borrará el historial de rondas y las parejas jugadas, pero se mantendrán los jugadores registrados.', () => {
+                    appState.roundsHistory = [];
+                    appState.playedPairs = {};
+                    appState.currentRoundIndex = 0;
+                    appState.players.forEach(p => p.restCount = 0);
+                    saveToLocalStorage();
+                    renderCourts();
+                    renderHistory();
+                    updateUIState();
+                });
+            });
+
+            // Draw Button
+            document.getElementById('btn-draw').addEventListener('click', generateRound);
+        });
+
+        // --- SISTEMA DE NAVEGACIÓN ENTRE PESTAÑAS ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-ball');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            activeNav.classList.remove('text-slate-400');
+            activeNav.classList.add('text-ball');
+
+            if (tabName === 'history') {
+                renderHistory();
+            }
+        }
+
+        function switchHistoryTab(subTab) {
+            const btnRounds = document.getElementById('btn-sub-rounds');
+            const btnPairs = document.getElementById('btn-sub-pairs');
+            const viewRounds = document.getElementById('history-rounds-view');
+            const viewPairs = document.getElementById('history-pairs-view');
+
+            if (subTab === 'rounds') {
+                btnRounds.className = "flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all font-bold";
+                btnPairs.className = "flex-1 py-1.5 rounded-lg text-slate-400 transition-all font-semibold";
+                viewRounds.classList.remove('hidden');
+                viewPairs.classList.add('hidden');
+            } else {
+                btnPairs.className = "flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all font-bold";
+                btnRounds.className = "flex-1 py-1.5 rounded-lg text-slate-400 transition-all font-semibold";
+                viewPairs.classList.remove('hidden');
+                viewRounds.classList.add('hidden');
+                renderPairsMatrix();
+            }
+        }
+
+        // --- GESTIÓN DE JUGADORES ---
+        function addPlayer(name) {
+            const trimmed = name.trim();
+            if (!trimmed) return;
+
+            if (appState.players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
+                showSimpleModal('Nombre duplicado', 'Ya existe un jugador con este nombre.');
+                return;
+            }
+
+            const newPlayer = {
+                id: 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                name: trimmed,
+                restCount: 0
+            };
+
+            appState.players.push(newPlayer);
+            saveToLocalStorage();
+            renderPlayersList();
+            updateUIState();
+        }
+
+        function removePlayer(id) {
+            if (appState.roundsHistory.length > 0) {
+                showModal('Modificar Jugadores', 'Eliminar un jugador durante un torneo en curso reajustará la lista, pero conservará el historial anterior.', () => {
+                    executeRemovePlayer(id);
+                });
+            } else {
+                executeRemovePlayer(id);
+            }
+        }
+
+        function executeRemovePlayer(id) {
+            appState.players = appState.players.filter(p => p.id !== id);
+            saveToLocalStorage();
+            renderPlayersList();
+            updateUIState();
+        }
+
+        function clearAllPlayers() {
+            showModal('¿Vaciar lista?', 'Se eliminarán todos los jugadores de la lista.', () => {
+                appState.players = [];
+                appState.roundsHistory = [];
+                appState.playedPairs = {};
+                appState.currentRoundIndex = 0;
+                saveToLocalStorage();
+                renderPlayersList();
+                renderCourts();
+                updateUIState();
+            });
+        }
+
+        function loadSamplePlayers(count) {
+            const sampleNames = [
+                "Rafa Nadal", "Carlos Alcaraz", "Roger Federer", "Novak Djokovic",
+                "Andy Murray", "Jannik Sinner", "Daniil Medvedev", "Alexander Zverev",
+                "Stefanos Tsitsipas", "Casper Ruud", "Andrey Rublev", "Holger Rune"
+            ];
+
+            const selected = sampleNames.slice(0, count);
+            appState.players = selected.map((name, index) => ({
+                id: 'p_sample_' + index + '_' + Date.now(),
+                name: name,
+                restCount: 0
+            }));
+
+            appState.roundsHistory = [];
+            appState.playedPairs = {};
+            appState.currentRoundIndex = 0;
+
+            saveToLocalStorage();
+            renderPlayersList();
+            renderCourts();
+            updateUIState();
+        }
+
+        function renderPlayersList() {
+            const container = document.getElementById('players-list');
+            const emptyMsg = document.getElementById('empty-players-msg');
+            const badge = document.getElementById('player-count-badge');
+
+            badge.textContent = appState.players.length;
+
+            if (appState.players.length === 0) {
+                container.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+
+            emptyMsg.classList.add('hidden');
+            container.innerHTML = appState.players.map(p => `
+                <div class="inline-flex items-center gap-1.5 bg-slate-800 border border-slate-700/80 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 group transition-all">
+                    <span class="w-2 h-2 rounded-full bg-ball"></span>
+                    <span>${escapeHtml(p.name)}</span>
+                    <button onclick="removePlayer('${p.id}')" class="text-slate-500 hover:text-red-400 p-0.5 rounded-lg transition-colors ml-1">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // --- ACTUALIZACIÓN DE ESTADO Y VALIDACIONES DE UI ---
+        function updateUIState() {
+            const count = appState.players.length;
+            const statusBox = document.getElementById('status-info-box');
+            const drawBtnText = document.getElementById('btn-draw-text');
+
+            drawBtnText.textContent = `Sortear Ronda ${appState.roundsHistory.length + 1}`;
+
+            if (count < 4) {
+                statusBox.className = "p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs leading-relaxed flex items-center gap-2";
+                statusBox.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i> <span>Se necesitan al menos <strong>4 jugadores</strong> para poder formar partidos de dobles.</span>`;
+                statusBox.classList.remove('hidden');
+            } else {
+                const playingCount = Math.floor(count / 4) * 4;
+                const restingCount = count % 4;
+
+                let msg = `Con <strong>${count} jugadores</strong> se jugarán <strong>${playingCount / 4} pista(s)</strong> (${playingCount} jugadores).`;
+                if (restingCount > 0) {
+                    msg += ` <span class="text-amber-400 font-medium">Descansarán ${restingCount} jugador(es) por ronda en rotación justa.</span>`;
+                }
+
+                statusBox.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs leading-relaxed flex items-center gap-2";
+                statusBox.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 text-emerald-400"></i> <span>${msg}</span>`;
+                statusBox.classList.remove('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- ALGORITMO PRINCIPAL DE SORTEO DE DOBLES SIN REPETIR PAREJA ---
+        function generateRound() {
+            const totalPlayers = appState.players.length;
+
+            if (totalPlayers < 4) {
+                showSimpleModal("Insuficientes Jugadores", "Se requieren al menos 4 jugadores registrados para realizar el sorteo.");
+                return;
+            }
+
+            // 1. Determinar quiénes descansan (los que menos han descansado o aleatorio en empate)
+            const numPlaying = Math.floor(totalPlayers / 4) * 4;
+            const numResting = totalPlayers - numPlaying;
+
+            // Ordenar jugadores priorizando menor número de descansos
+            let sortedByRest = [...appState.players].sort((a, b) => {
+                if (a.restCount !== b.restCount) {
+                    return a.restCount - b.restCount; // los que menos han descansado van primero
+                }
+                return Math.random() - 0.5; // desempate aleatorio
+            });
+
+            const activePlayers = sortedByRest.slice(0, numPlaying);
+            const restingPlayers = sortedByRest.slice(numPlaying);
+
+            // 2. Formar parejas para los activePlayers con RESTRICCIÓN DE NO REPETIR PAREJA
+            const pairsSolution = solvePairsWithoutRepetition(activePlayers);
+
+            if (!pairsSolution) {
+                // Si no existe solución estricta (se han agotado las combinaciones únicas)
+                showModal('Todas las parejas posibles ya han jugado', 
+                    'Se han agotado las combinaciones sin repetir parejos entre los jugadores activos. ¿Deseas reiniciar la memoria de parejas para empezar un nuevo ciclo manteniendo la puntuación/jugadores?', 
+                    () => {
+                        appState.playedPairs = {};
+                        saveToLocalStorage();
+                        generateRound(); // Re-intentar
+                    }
+                );
+                return;
+            }
+
+            // 3. Crear partidos (2 parejas por pista)
+            // Mezclar las parejas para que los rivales varíen aleatoriamente
+            const shuffledPairs = shuffleArray([...pairsSolution]);
+            const matches = [];
+
+            for (let i = 0; i < shuffledPairs.length; i += 2) {
+                matches.push({
+                    courtNumber: (i / 2) + 1,
+                    pair1: shuffledPairs[i],
+                    pair2: shuffledPairs[i + 1]
+                });
+            }
+
+            // 4. Actualizar contadores de descanso y registros
+            restingPlayers.forEach(p => {
+                const found = appState.players.find(pl => pl.id === p.id);
+                if (found) found.restCount += 1;
+            });
+
+            // Registrar las nuevas parejas en playedPairs
+            pairsSolution.forEach(pair => {
+                const key = getPairKey(pair[0].id, pair[1].id);
+                appState.playedPairs[key] = true;
+            });
+
+            // Guardar Ronda en Historial
+            const newRound = {
+                roundNumber: appState.roundsHistory.length + 1,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                matches: matches.map(m => ({
+                    courtNumber: m.courtNumber,
+                    pair1: [m.pair1[0].id, m.pair1[1].id],
+                    pair2: [m.pair2[0].id, m.pair2[1].id]
+                })),
+                resting: restingPlayers.map(p => p.id)
+            };
+
+            appState.roundsHistory.push(newRound);
+            saveToLocalStorage();
+
+            // Renderizar la nueva ronda en la pantalla de partidos
+            renderCourts();
+            updateUIState();
+
+            // Si estábamos en pestaña de jugadores, ir automáticamente a la pestaña de partidos
+            switchTab('match');
+        }
+
+        // --- ALGORITMO BACKTRACKING / RECURSIVO DE EMPAREJAMIENTO UNICO ---
+        function solvePairsWithoutRepetition(players) {
+            // Intentar varios intentos de mezclar para obtener variedad aleatoria en los emparejamientos
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const shuffled = shuffleArray([...players]);
+                const result = backtrackPairs(shuffled, []);
+                if (result) {
+                    return result;
+                }
+            }
+            return null; // No se encontró combinación válida sin repetir
+        }
+
+        function backtrackPairs(remaining, currentPairs) {
+            if (remaining.length === 0) {
+                return currentPairs;
+            }
+
+            const p1 = remaining[0];
+
+            for (let i = 1; i < remaining.length; i++) {
+                const p2 = remaining[i];
+                const key = getPairKey(p1.id, p2.id);
+
+                // Comprobar si ya jugaron juntos
+                if (!appState.playedPairs[key]) {
+                    const nextRemaining = remaining.filter((_, idx) => idx !== 0 && idx !== i);
+                    const solution = backtrackPairs(nextRemaining, [...currentPairs, [p1, p2]]);
+                    if (solution) return solution;
+                }
+            }
+
+            return null;
+        }
+
+        function getPairKey(id1, id2) {
+            return id1 < id2 ? `${id1}___${id2}` : `${id2}___${id1}`;
+        }
+
+        function shuffleArray(arr) {
+            const array = [...arr];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- RENDERIZADO DE PISTAS Y PARTIDOS ---
+        function renderCourts() {
+            const container = document.getElementById('courts-container');
+            const restingContainer = document.getElementById('resting-container');
+            const restingList = document.getElementById('resting-players-list');
+
+            if (appState.roundsHistory.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 text-sm bg-slate-800/30 rounded-2xl border border-slate-800/60">
+                        <i data-lucide="trophy" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+                        Presiona "Sortear" para generar los partidos de la ronda sin repetir parejas.
+                    </div>
+                `;
+                restingContainer.classList.add('hidden');
+                lucide.createIcons();
+                return;
+            }
+
+            const currentRound = appState.roundsHistory[appState.roundsHistory.length - 1];
+
+            // Renderizar Pistas
+            container.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-ball flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Ronda ${currentRound.roundNumber} en curso
+                    </span>
+                    <span class="text-[11px] text-slate-400">${currentRound.timestamp || ''}</span>
+                </div>
+            ` + currentRound.matches.map(m => {
+                const p1_1 = getPlayerName(m.pair1[0]);
+                const p1_2 = getPlayerName(m.pair1[1]);
+                const p2_1 = getPlayerName(m.pair2[0]);
+                const p2_2 = getPlayerName(m.pair2[1]);
+
+                return `
+                    <div class="court-card rounded-2xl border border-emerald-600/40 p-4 text-white relative overflow-hidden">
+                        <!-- Identificador de Pista -->
+                        <div class="flex justify-between items-center mb-3 border-b border-emerald-500/30 pb-2">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-ball flex items-center gap-1">
+                                🎾 Pista ${m.courtNumber}
+                            </span>
+                            <span class="text-[10px] bg-slate-900/60 text-slate-300 px-2 py-0.5 rounded-md font-mono">DOBLES</span>
+                        </div>
+
+                        <!-- Cancha Visual -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center text-center">
+                            
+                            <!-- Pareja A -->
+                            <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 shadow-inner">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pareja A</div>
+                                <div class="font-bold text-sm text-white flex flex-col gap-0.5">
+                                    <span class="truncate">${escapeHtml(p1_1)}</span>
+                                    <span class="text-ball text-xs font-normal">&</span>
+                                    <span class="truncate">${escapeHtml(p1_2)}</span>
+                                </div>
+                            </div>
+
+                            <div class="font-black text-xs text-ball my-0.5 md:my-0 tracking-widest uppercase">VS</div>
+
+                            <!-- Pareja B -->
+                            <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 shadow-inner">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pareja B</div>
+                                <div class="font-bold text-sm text-white flex flex-col gap-0.5">
+                                    <span class="truncate">${escapeHtml(p2_1)}</span>
+                                    <span class="text-ball text-xs font-normal">&</span>
+                                    <span class="truncate">${escapeHtml(p2_2)}</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Renderizar Descansos si aplica
+            if (currentRound.resting && currentRound.resting.length > 0) {
+                restingContainer.classList.remove('hidden');
+                restingList.innerHTML = currentRound.resting.map(id => `
+                    <span class="inline-flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 text-amber-300 px-3 py-1 rounded-xl text-xs font-medium">
+                        <i data-lucide="user" class="w-3.5 h-3.5"></i> ${escapeHtml(getPlayerName(id))}
+                    </span>
+                `).join('');
+            } else {
+                restingContainer.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- RENDERIZADO DE HISTORIAL Y TABLA DE MATRIZ ---
+        function renderHistory() {
+            const listContainer = document.getElementById('history-rounds-list');
+
+            if (appState.roundsHistory.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">Aún no se han generado rondas en este torneo.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = [...appState.roundsHistory].reverse().map(round => `
+                <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between items-center text-xs border-b border-slate-700/50 pb-2">
+                        <span class="font-bold text-ball">Ronda ${round.roundNumber}</span>
+                        <span class="text-slate-400">${round.timestamp || ''}</span>
+                    </div>
+                    <div class="space-y-2 pt-1">
+                        ${round.matches.map(m => `
+                            <div class="text-xs bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                                <span class="font-medium text-slate-300">${escapeHtml(getPlayerName(m.pair1[0]))} / ${escapeHtml(getPlayerName(m.pair1[1]))}</span>
+                                <span class="text-[10px] text-ball font-bold px-1.5">VS</span>
+                                <span class="font-medium text-slate-300">${escapeHtml(getPlayerName(m.pair2[0]))} / ${escapeHtml(getPlayerName(m.pair2[1]))}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${round.resting && round.resting.length > 0 ? `
+                        <div class="text-[11px] text-amber-400/90 pt-1 flex items-center gap-1">
+                            <span>Descansaron:</span>
+                            <span class="text-slate-300">${round.resting.map(id => getPlayerName(id)).join(', ')}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderPairsMatrix() {
+            const container = document.getElementById('pairs-matrix-container');
+            const players = appState.players;
+
+            if (players.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">Añade jugadores para ver la matriz.</div>`;
+                return;
+            }
+
+            let html = `<table class="w-full text-left text-[11px] border-collapse">`;
+            html += `<thead><tr><th class="p-1.5 border-b border-slate-700 text-slate-400"></th>`;
+            
+            players.forEach(p => {
+                html += `<th class="p-1.5 border-b border-slate-700 text-slate-300 font-bold max-w-[60px] truncate" title="${escapeHtml(p.name)}">${escapeHtml(p.name.substring(0, 4))}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            players.forEach((p1, i) => {
+                html += `<tr><td class="p-1.5 border-r border-slate-700 font-bold text-slate-300 max-w-[70px] truncate" title="${escapeHtml(p1.name)}">${escapeHtml(p1.name.substring(0, 5))}</td>`;
+                players.forEach((p2, j) => {
+                    if (i === j) {
+                        html += `<td class="p-1.5 bg-slate-900/40 text-center text-slate-600">-</td>`;
+                    } else {
+                        const key = getPairKey(p1.id, p2.id);
+                        const hasPlayed = appState.playedPairs[key];
+                        html += `
+                            <td class="p-1.5 text-center border border-slate-800/40 ${hasPlayed ? 'bg-emerald-900/60 text-emerald-300 font-bold' : 'bg-slate-800/20 text-slate-600'}">
+                                ${hasPlayed ? '✓' : '•'}
+                            </td>
+                        `;
+                    }
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        // --- AUXILIARES Y PERSISTENCIA (LOCALSTORAGE) ---
+        function getPlayerName(id) {
+            const p = appState.players.find(x => x.id === id);
+            return p ? p.name : 'Desconocido';
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('tennis_doubles_app_state', JSON.stringify(appState));
+            } catch (e) {
+                console.error('Error al guardar estado:', e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('tennis_doubles_app_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState = { ...appState, ...parsed };
+                }
+            } catch (e) {
+                console.error('Error al cargar estado:', e);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- MODAL PERSONALIZADO (Evitamos alert nativo) ---
+        let currentModalCallback = null;
+
+        function showModal(title, message, onConfirm = null) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            currentModalCallback = onConfirm;
+
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('modal-box');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+            }, 10);
+        }
+
+        function showSimpleModal(title, message) {
+            showModal(title, message, null);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            const box = document<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Torneo Tenis Dobles - Sorteo Rotativo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Configuración personalizada de Tailwind para colores de Tenis -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        court: {
+                            DEFAULT: '#1b5e20', // Verde pista
+                            dark: '#0d3b13',
+                            light: '#2e7d32',
+                            blue: '#1565c0', // Azul pista rápida alternativa
+                        },
+                        ball: {
+                            DEFAULT: '#ccff00', // Amarillo pelota tenis
+                            hover: '#b3e600',
+                            dark: '#99c200'
+                        },
+                        clay: '#c65102'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Estilos personalizados -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Textura estilo pista de tenis */
+        .court-bg {
+            background-color: #1e4620;
+            background-image: radial-gradient(#2e7d32 1px, transparent 0);
+            background-size: 16px 16px;
+        }
+
+        .court-card {
+            background: linear-gradient(135deg, #1b5e20 0%, #0d3b13 100%);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Líneas de pista */
+        .court-lines {
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            position: relative;
+        }
+
+        .court-lines::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Botón estilo pelota de tenis */
+        .btn-ball {
+            background-color: #ccff00;
+            color: #0d3b13;
+            font-weight: 800;
+            box-shadow: 0 4px 14px rgba(204, 255, 0, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .btn-ball:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 6px rgba(204, 255, 0, 0.3);
+        }
+
+        /* Scrollbar suave */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(204, 255, 0, 0.3);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(204, 255, 0, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between pb-16 md:pb-0">
+
+    <!-- Encabezado Principal -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-full bg-ball flex items-center justify-center text-court-dark font-black text-xl shadow-lg">
+                    🎾
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-base tracking-wide text-white flex items-center gap-1.5">
+                        TieBreak Doubles
+                    </h1>
+                    <p class="text-xs text-slate-400">Torneo Rotativo de Dobles</p>
+                </div>
+            </div>
+            <button id="btn-reset-all" title="Reiniciar Torneo" class="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenido Principal (Navegación por Pestañas) -->
+    <main class="max-w-md mx-auto w-full flex-grow p-4 space-y-4">
+
+        <!-- Pestaña 1: Configuración de Jugadores -->
+        <section id="sec-players" class="tab-content space-y-4">
+            <!-- Formulario Añadir Jugador -->
+            <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 shadow-xl">
+                <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+                    <span>Jugadores Inscritos</span>
+                    <span id="player-count-badge" class="bg-ball text-court-dark px-2 py-0.5 rounded-full text-xs font-black">0</span>
+                </h2>
+                
+                <form id="add-player-form" class="flex gap-2 mb-3">
+                    <input type="text" id="player-name-input" placeholder="Nombre del jugador..." 
+                           class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-ball text-white placeholder-slate-500">
+                    <button type="submit" class="btn-ball px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-1 shrink-0">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Añadir
+                    </button>
+                </form>
+
+                <!-- Sugerencia rápido -->
+                <div class="flex flex-wrap gap-1.5 mb-2">
+                    <button type="button" onclick="loadSamplePlayers(8)" class="text-[11px] bg-slate-700/50 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-600/40 transition-colors">
+                        + Cargar 8 Jugadores Ejemplo
+                    </button>
+                    <button type="button" onclick="loadSamplePlayers(12)" class="text-[11px] bg-slate-700/50 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-600/40 transition-colors">
+                        + Cargar 12
+                    </button>
+                    <button type="button" onclick="clearAllPlayers()" class="text-[11px] bg-red-950/40 hover:bg-red-900/40 text-red-300 px-2.5 py-1 rounded-lg border border-red-800/30 transition-colors ml-auto">
+                        Vaciar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de Jugadores (Chips) -->
+            <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-4 min-h-[140px]">
+                <div id="players-list" class="flex flex-wrap gap-2">
+                    <!-- Dinámico por JS -->
+                </div>
+                <div id="empty-players-msg" class="text-center py-8 text-slate-500 text-sm">
+                    <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 opacity-30"></i>
+                    Añade al menos 4 jugadores para comenzar el torneo.
+                </div>
+            </div>
+
+            <!-- Advertencias de Configuración -->
+            <div id="status-info-box" class="p-3.5 rounded-xl border text-xs leading-relaxed hidden">
+                <!-- Información contextual -->
+            </div>
+        </section>
+
+        <!-- Pestaña 2: Partidos de la Ronda Actual -->
+        <section id="sec-match" class="tab-content space-y-4 hidden">
+            <!-- Panel Acción de Sorteo -->
+            <div class="flex flex-col gap-3">
+                <button id="btn-draw" class="btn-ball w-full py-3.5 rounded-2xl text-base tracking-wide uppercase flex items-center justify-center gap-2 shadow-lg">
+                    <i data-lucide="dices" class="w-5 h-5"></i>
+                    <span id="btn-draw-text">Sortear Ronda 1</span>
+                </button>
+            </div>
+
+            <!-- Listado de Pistas y Enfrentamientos -->
+            <div id="courts-container" class="space-y-4">
+                <div class="text-center py-12 text-slate-500 text-sm bg-slate-800/30 rounded-2xl border border-slate-800/60">
+                    <i data-lucide="trophy" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+                    Presiona "Sortear" para generar los partidos de la ronda sin repetir parejas.
+                </div>
+            </div>
+
+            <!-- Jugadores en Descanso (Si N no es múltiplo de 4) -->
+            <div id="resting-container" class="hidden bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3.5">
+                <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i data-lucide="coffee" class="w-4 h-4"></i> Descansan esta ronda
+                </h3>
+                <div id="resting-players-list" class="flex flex-wrap gap-2">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Pestaña 3: Historial y Combinaciones -->
+        <section id="sec-history" class="tab-content space-y-4 hidden">
+            <!-- Selector Sub-vistas -->
+            <div class="flex bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+                <button id="btn-sub-rounds" onclick="switchHistoryTab('rounds')" class="flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all">Rondas Jugadas</button>
+                <button id="btn-sub-pairs" onclick="switchHistoryTab('pairs')" class="flex-1 py-1.5 rounded-lg text-slate-400 transition-all">Matriz de Parejas</button>
+            </div>
+
+            <!-- Vista 1: Rondas Antiguas -->
+            <div id="history-rounds-view" class="space-y-3">
+                <div id="history-rounds-list" class="space-y-3">
+                    <div class="text-center py-8 text-slate-500 text-sm">Aún no se han jugado rondas.</div>
+                </div>
+            </div>
+
+            <!-- Vista 2: Matriz de Parejas que han jugado juntas -->
+            <div id="history-pairs-view" class="hidden space-y-3">
+                <div class="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-3 text-xs text-slate-300">
+                    <p class="font-semibold text-ball mb-1">Control de Repeticiones</p>
+                    <p class="text-slate-400">Verde indica pareja que ya ha jugado junta. Se evitan repeticiones hasta agotar todas las posibilidades.</p>
+                </div>
+                <div id="pairs-matrix-container" class="overflow-x-auto bg-slate-800/40 rounded-2xl border border-slate-800 p-2">
+                    <!-- Tabla de matriz por JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Navegación Inferior Móvil (Barra Fija) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 z-50">
+        <div class="max-w-md mx-auto flex justify-around p-2">
+            <button onclick="switchTab('players')" id="nav-players" class="nav-btn flex flex-col items-center gap-1 p-2 text-ball">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Jugadores</span>
+            </button>
+            <button onclick="switchTab('match')" id="nav-match" class="nav-btn flex flex-col items-center gap-1 p-2 text-slate-400">
+                <i data-lucide="swords" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Sorteo / Pistas</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="nav-btn flex flex-col items-center gap-1 p-2 text-slate-400">
+                <i data-lucide="history" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold tracking-tight">Historial</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal Notificación/Mensajes Customizado (Sin alert) -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-xs w-full text-center space-y-4 shadow-2xl transform scale-95 transition-transform duration-200" id="modal-box">
+            <div id="modal-icon" class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 id="modal-title" class="font-bold text-white text-base">Atención</h3>
+                <p id="modal-message" class="text-xs text-slate-300 mt-1">Mensaje de alerta</p>
+            </div>
+            <button onclick="closeModal()" class="btn-ball w-full py-2 rounded-xl text-xs font-bold uppercase">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Script Lógico Completo de la App -->
+    <script>
+        // --- ESTADO GLOBAL Y PERSISTENCIA DE LA APP ---
+        let appState = {
+            players: [], // Lista de { id, name, restCount }
+            roundsHistory: [], // Array de rondas: { roundNumber, matches: [{pair1: [id, id], pair2: [id, id]}], resting: [id] }
+            playedPairs: {}, // Objeto clave 'id1-id2' => true (ordenados id1 < id2)
+            currentRoundIndex: 0
+        };
+
+        // --- INICIALIZACIÓN DE LA APLICACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            lucide.createIcons();
+            renderPlayersList();
+            updateUIState();
+
+            // Form Submit Listener
+            document.getElementById('add-player-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const input = document.getElementById('player-name-input');
+                addPlayer(input.value);
+                input.value = '';
+                input.focus();
+            });
+
+            // Reset Button
+            document.getElementById('btn-reset-all').addEventListener('click', () => {
+                showModal('¿Reiniciar Torneo?', 'Se borrará el historial de rondas y las parejas jugadas, pero se mantendrán los jugadores registrados.', () => {
+                    appState.roundsHistory = [];
+                    appState.playedPairs = {};
+                    appState.currentRoundIndex = 0;
+                    appState.players.forEach(p => p.restCount = 0);
+                    saveToLocalStorage();
+                    renderCourts();
+                    renderHistory();
+                    updateUIState();
+                });
+            });
+
+            // Draw Button
+            document.getElementById('btn-draw').addEventListener('click', generateRound);
+        });
+
+        // --- SISTEMA DE NAVEGACIÓN ENTRE PESTAÑAS ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-ball');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`sec-${tabName}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            activeNav.classList.remove('text-slate-400');
+            activeNav.classList.add('text-ball');
+
+            if (tabName === 'history') {
+                renderHistory();
+            }
+        }
+
+        function switchHistoryTab(subTab) {
+            const btnRounds = document.getElementById('btn-sub-rounds');
+            const btnPairs = document.getElementById('btn-sub-pairs');
+            const viewRounds = document.getElementById('history-rounds-view');
+            const viewPairs = document.getElementById('history-pairs-view');
+
+            if (subTab === 'rounds') {
+                btnRounds.className = "flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all font-bold";
+                btnPairs.className = "flex-1 py-1.5 rounded-lg text-slate-400 transition-all font-semibold";
+                viewRounds.classList.remove('hidden');
+                viewPairs.classList.add('hidden');
+            } else {
+                btnPairs.className = "flex-1 py-1.5 rounded-lg bg-ball text-court-dark transition-all font-bold";
+                btnRounds.className = "flex-1 py-1.5 rounded-lg text-slate-400 transition-all font-semibold";
+                viewPairs.classList.remove('hidden');
+                viewRounds.classList.add('hidden');
+                renderPairsMatrix();
+            }
+        }
+
+        // --- GESTIÓN DE JUGADORES ---
+        function addPlayer(name) {
+            const trimmed = name.trim();
+            if (!trimmed) return;
+
+            if (appState.players.some(p => p.name.toLowerCase() === trimmed.toLowerCase())) {
+                showSimpleModal('Nombre duplicado', 'Ya existe un jugador con este nombre.');
+                return;
+            }
+
+            const newPlayer = {
+                id: 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                name: trimmed,
+                restCount: 0
+            };
+
+            appState.players.push(newPlayer);
+            saveToLocalStorage();
+            renderPlayersList();
+            updateUIState();
+        }
+
+        function removePlayer(id) {
+            if (appState.roundsHistory.length > 0) {
+                showModal('Modificar Jugadores', 'Eliminar un jugador durante un torneo en curso reajustará la lista, pero conservará el historial anterior.', () => {
+                    executeRemovePlayer(id);
+                });
+            } else {
+                executeRemovePlayer(id);
+            }
+        }
+
+        function executeRemovePlayer(id) {
+            appState.players = appState.players.filter(p => p.id !== id);
+            saveToLocalStorage();
+            renderPlayersList();
+            updateUIState();
+        }
+
+        function clearAllPlayers() {
+            showModal('¿Vaciar lista?', 'Se eliminarán todos los jugadores de la lista.', () => {
+                appState.players = [];
+                appState.roundsHistory = [];
+                appState.playedPairs = {};
+                appState.currentRoundIndex = 0;
+                saveToLocalStorage();
+                renderPlayersList();
+                renderCourts();
+                updateUIState();
+            });
+        }
+
+        function loadSamplePlayers(count) {
+            const sampleNames = [
+                "Rafa Nadal", "Carlos Alcaraz", "Roger Federer", "Novak Djokovic",
+                "Andy Murray", "Jannik Sinner", "Daniil Medvedev", "Alexander Zverev",
+                "Stefanos Tsitsipas", "Casper Ruud", "Andrey Rublev", "Holger Rune"
+            ];
+
+            const selected = sampleNames.slice(0, count);
+            appState.players = selected.map((name, index) => ({
+                id: 'p_sample_' + index + '_' + Date.now(),
+                name: name,
+                restCount: 0
+            }));
+
+            appState.roundsHistory = [];
+            appState.playedPairs = {};
+            appState.currentRoundIndex = 0;
+
+            saveToLocalStorage();
+            renderPlayersList();
+            renderCourts();
+            updateUIState();
+        }
+
+        function renderPlayersList() {
+            const container = document.getElementById('players-list');
+            const emptyMsg = document.getElementById('empty-players-msg');
+            const badge = document.getElementById('player-count-badge');
+
+            badge.textContent = appState.players.length;
+
+            if (appState.players.length === 0) {
+                container.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+
+            emptyMsg.classList.add('hidden');
+            container.innerHTML = appState.players.map(p => `
+                <div class="inline-flex items-center gap-1.5 bg-slate-800 border border-slate-700/80 hover:border-slate-600 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-200 group transition-all">
+                    <span class="w-2 h-2 rounded-full bg-ball"></span>
+                    <span>${escapeHtml(p.name)}</span>
+                    <button onclick="removePlayer('${p.id}')" class="text-slate-500 hover:text-red-400 p-0.5 rounded-lg transition-colors ml-1">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        // --- ACTUALIZACIÓN DE ESTADO Y VALIDACIONES DE UI ---
+        function updateUIState() {
+            const count = appState.players.length;
+            const statusBox = document.getElementById('status-info-box');
+            const drawBtnText = document.getElementById('btn-draw-text');
+
+            drawBtnText.textContent = `Sortear Ronda ${appState.roundsHistory.length + 1}`;
+
+            if (count < 4) {
+                statusBox.className = "p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs leading-relaxed flex items-center gap-2";
+                statusBox.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i> <span>Se necesitan al menos <strong>4 jugadores</strong> para poder formar partidos de dobles.</span>`;
+                statusBox.classList.remove('hidden');
+            } else {
+                const playingCount = Math.floor(count / 4) * 4;
+                const restingCount = count % 4;
+
+                let msg = `Con <strong>${count} jugadores</strong> se jugarán <strong>${playingCount / 4} pista(s)</strong> (${playingCount} jugadores).`;
+                if (restingCount > 0) {
+                    msg += ` <span class="text-amber-400 font-medium">Descansarán ${restingCount} jugador(es) por ronda en rotación justa.</span>`;
+                }
+
+                statusBox.className = "p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-xs leading-relaxed flex items-center gap-2";
+                statusBox.innerHTML = `<i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 text-emerald-400"></i> <span>${msg}</span>`;
+                statusBox.classList.remove('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- ALGORITMO PRINCIPAL DE SORTEO DE DOBLES SIN REPETIR PAREJA ---
+        function generateRound() {
+            const totalPlayers = appState.players.length;
+
+            if (totalPlayers < 4) {
+                showSimpleModal("Insuficientes Jugadores", "Se requieren al menos 4 jugadores registrados para realizar el sorteo.");
+                return;
+            }
+
+            // 1. Determinar quiénes descansan (los que menos han descansado o aleatorio en empate)
+            const numPlaying = Math.floor(totalPlayers / 4) * 4;
+            const numResting = totalPlayers - numPlaying;
+
+            // Ordenar jugadores priorizando menor número de descansos
+            let sortedByRest = [...appState.players].sort((a, b) => {
+                if (a.restCount !== b.restCount) {
+                    return a.restCount - b.restCount; // los que menos han descansado van primero
+                }
+                return Math.random() - 0.5; // desempate aleatorio
+            });
+
+            const activePlayers = sortedByRest.slice(0, numPlaying);
+            const restingPlayers = sortedByRest.slice(numPlaying);
+
+            // 2. Formar parejas para los activePlayers con RESTRICCIÓN DE NO REPETIR PAREJA
+            const pairsSolution = solvePairsWithoutRepetition(activePlayers);
+
+            if (!pairsSolution) {
+                // Si no existe solución estricta (se han agotado las combinaciones únicas)
+                showModal('Todas las parejas posibles ya han jugado', 
+                    'Se han agotado las combinaciones sin repetir parejos entre los jugadores activos. ¿Deseas reiniciar la memoria de parejas para empezar un nuevo ciclo manteniendo la puntuación/jugadores?', 
+                    () => {
+                        appState.playedPairs = {};
+                        saveToLocalStorage();
+                        generateRound(); // Re-intentar
+                    }
+                );
+                return;
+            }
+
+            // 3. Crear partidos (2 parejas por pista)
+            // Mezclar las parejas para que los rivales varíen aleatoriamente
+            const shuffledPairs = shuffleArray([...pairsSolution]);
+            const matches = [];
+
+            for (let i = 0; i < shuffledPairs.length; i += 2) {
+                matches.push({
+                    courtNumber: (i / 2) + 1,
+                    pair1: shuffledPairs[i],
+                    pair2: shuffledPairs[i + 1]
+                });
+            }
+
+            // 4. Actualizar contadores de descanso y registros
+            restingPlayers.forEach(p => {
+                const found = appState.players.find(pl => pl.id === p.id);
+                if (found) found.restCount += 1;
+            });
+
+            // Registrar las nuevas parejas en playedPairs
+            pairsSolution.forEach(pair => {
+                const key = getPairKey(pair[0].id, pair[1].id);
+                appState.playedPairs[key] = true;
+            });
+
+            // Guardar Ronda en Historial
+            const newRound = {
+                roundNumber: appState.roundsHistory.length + 1,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                matches: matches.map(m => ({
+                    courtNumber: m.courtNumber,
+                    pair1: [m.pair1[0].id, m.pair1[1].id],
+                    pair2: [m.pair2[0].id, m.pair2[1].id]
+                })),
+                resting: restingPlayers.map(p => p.id)
+            };
+
+            appState.roundsHistory.push(newRound);
+            saveToLocalStorage();
+
+            // Renderizar la nueva ronda en la pantalla de partidos
+            renderCourts();
+            updateUIState();
+
+            // Si estábamos en pestaña de jugadores, ir automáticamente a la pestaña de partidos
+            switchTab('match');
+        }
+
+        // --- ALGORITMO BACKTRACKING / RECURSIVO DE EMPAREJAMIENTO UNICO ---
+        function solvePairsWithoutRepetition(players) {
+            // Intentar varios intentos de mezclar para obtener variedad aleatoria en los emparejamientos
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const shuffled = shuffleArray([...players]);
+                const result = backtrackPairs(shuffled, []);
+                if (result) {
+                    return result;
+                }
+            }
+            return null; // No se encontró combinación válida sin repetir
+        }
+
+        function backtrackPairs(remaining, currentPairs) {
+            if (remaining.length === 0) {
+                return currentPairs;
+            }
+
+            const p1 = remaining[0];
+
+            for (let i = 1; i < remaining.length; i++) {
+                const p2 = remaining[i];
+                const key = getPairKey(p1.id, p2.id);
+
+                // Comprobar si ya jugaron juntos
+                if (!appState.playedPairs[key]) {
+                    const nextRemaining = remaining.filter((_, idx) => idx !== 0 && idx !== i);
+                    const solution = backtrackPairs(nextRemaining, [...currentPairs, [p1, p2]]);
+                    if (solution) return solution;
+                }
+            }
+
+            return null;
+        }
+
+        function getPairKey(id1, id2) {
+            return id1 < id2 ? `${id1}___${id2}` : `${id2}___${id1}`;
+        }
+
+        function shuffleArray(arr) {
+            const array = [...arr];
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // --- RENDERIZADO DE PISTAS Y PARTIDOS ---
+        function renderCourts() {
+            const container = document.getElementById('courts-container');
+            const restingContainer = document.getElementById('resting-container');
+            const restingList = document.getElementById('resting-players-list');
+
+            if (appState.roundsHistory.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-500 text-sm bg-slate-800/30 rounded-2xl border border-slate-800/60">
+                        <i data-lucide="trophy" class="w-12 h-12 mx-auto mb-3 text-slate-600"></i>
+                        Presiona "Sortear" para generar los partidos de la ronda sin repetir parejas.
+                    </div>
+                `;
+                restingContainer.classList.add('hidden');
+                lucide.createIcons();
+                return;
+            }
+
+            const currentRound = appState.roundsHistory[appState.roundsHistory.length - 1];
+
+            // Renderizar Pistas
+            container.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-ball flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Ronda ${currentRound.roundNumber} en curso
+                    </span>
+                    <span class="text-[11px] text-slate-400">${currentRound.timestamp || ''}</span>
+                </div>
+            ` + currentRound.matches.map(m => {
+                const p1_1 = getPlayerName(m.pair1[0]);
+                const p1_2 = getPlayerName(m.pair1[1]);
+                const p2_1 = getPlayerName(m.pair2[0]);
+                const p2_2 = getPlayerName(m.pair2[1]);
+
+                return `
+                    <div class="court-card rounded-2xl border border-emerald-600/40 p-4 text-white relative overflow-hidden">
+                        <!-- Identificador de Pista -->
+                        <div class="flex justify-between items-center mb-3 border-b border-emerald-500/30 pb-2">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-ball flex items-center gap-1">
+                                🎾 Pista ${m.courtNumber}
+                            </span>
+                            <span class="text-[10px] bg-slate-900/60 text-slate-300 px-2 py-0.5 rounded-md font-mono">DOBLES</span>
+                        </div>
+
+                        <!-- Cancha Visual -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center text-center">
+                            
+                            <!-- Pareja A -->
+                            <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 shadow-inner">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pareja A</div>
+                                <div class="font-bold text-sm text-white flex flex-col gap-0.5">
+                                    <span class="truncate">${escapeHtml(p1_1)}</span>
+                                    <span class="text-ball text-xs font-normal">&</span>
+                                    <span class="truncate">${escapeHtml(p1_2)}</span>
+                                </div>
+                            </div>
+
+                            <div class="font-black text-xs text-ball my-0.5 md:my-0 tracking-widest uppercase">VS</div>
+
+                            <!-- Pareja B -->
+                            <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 shadow-inner">
+                                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pareja B</div>
+                                <div class="font-bold text-sm text-white flex flex-col gap-0.5">
+                                    <span class="truncate">${escapeHtml(p2_1)}</span>
+                                    <span class="text-ball text-xs font-normal">&</span>
+                                    <span class="truncate">${escapeHtml(p2_2)}</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Renderizar Descansos si aplica
+            if (currentRound.resting && currentRound.resting.length > 0) {
+                restingContainer.classList.remove('hidden');
+                restingList.innerHTML = currentRound.resting.map(id => `
+                    <span class="inline-flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 text-amber-300 px-3 py-1 rounded-xl text-xs font-medium">
+                        <i data-lucide="user" class="w-3.5 h-3.5"></i> ${escapeHtml(getPlayerName(id))}
+                    </span>
+                `).join('');
+            } else {
+                restingContainer.classList.add('hidden');
+            }
+
+            lucide.createIcons();
+        }
+
+        // --- RENDERIZADO DE HISTORIAL Y TABLA DE MATRIZ ---
+        function renderHistory() {
+            const listContainer = document.getElementById('history-rounds-list');
+
+            if (appState.roundsHistory.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-8 text-slate-500 text-sm">Aún no se han generado rondas en este torneo.</div>`;
+                return;
+            }
+
+            listContainer.innerHTML = [...appState.roundsHistory].reverse().map(round => `
+                <div class="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4 space-y-2">
+                    <div class="flex justify-between items-center text-xs border-b border-slate-700/50 pb-2">
+                        <span class="font-bold text-ball">Ronda ${round.roundNumber}</span>
+                        <span class="text-slate-400">${round.timestamp || ''}</span>
+                    </div>
+                    <div class="space-y-2 pt-1">
+                        ${round.matches.map(m => `
+                            <div class="text-xs bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center">
+                                <span class="font-medium text-slate-300">${escapeHtml(getPlayerName(m.pair1[0]))} / ${escapeHtml(getPlayerName(m.pair1[1]))}</span>
+                                <span class="text-[10px] text-ball font-bold px-1.5">VS</span>
+                                <span class="font-medium text-slate-300">${escapeHtml(getPlayerName(m.pair2[0]))} / ${escapeHtml(getPlayerName(m.pair2[1]))}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${round.resting && round.resting.length > 0 ? `
+                        <div class="text-[11px] text-amber-400/90 pt-1 flex items-center gap-1">
+                            <span>Descansaron:</span>
+                            <span class="text-slate-300">${round.resting.map(id => getPlayerName(id)).join(', ')}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderPairsMatrix() {
+            const container = document.getElementById('pairs-matrix-container');
+            const players = appState.players;
+
+            if (players.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">Añade jugadores para ver la matriz.</div>`;
+                return;
+            }
+
+            let html = `<table class="w-full text-left text-[11px] border-collapse">`;
+            html += `<thead><tr><th class="p-1.5 border-b border-slate-700 text-slate-400"></th>`;
+            
+            players.forEach(p => {
+                html += `<th class="p-1.5 border-b border-slate-700 text-slate-300 font-bold max-w-[60px] truncate" title="${escapeHtml(p.name)}">${escapeHtml(p.name.substring(0, 4))}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            players.forEach((p1, i) => {
+                html += `<tr><td class="p-1.5 border-r border-slate-700 font-bold text-slate-300 max-w-[70px] truncate" title="${escapeHtml(p1.name)}">${escapeHtml(p1.name.substring(0, 5))}</td>`;
+                players.forEach((p2, j) => {
+                    if (i === j) {
+                        html += `<td class="p-1.5 bg-slate-900/40 text-center text-slate-600">-</td>`;
+                    } else {
+                        const key = getPairKey(p1.id, p2.id);
+                        const hasPlayed = appState.playedPairs[key];
+                        html += `
+                            <td class="p-1.5 text-center border border-slate-800/40 ${hasPlayed ? 'bg-emerald-900/60 text-emerald-300 font-bold' : 'bg-slate-800/20 text-slate-600'}">
+                                ${hasPlayed ? '✓' : '•'}
+                            </td>
+                        `;
+                    }
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        // --- AUXILIARES Y PERSISTENCIA (LOCALSTORAGE) ---
+        function getPlayerName(id) {
+            const p = appState.players.find(x => x.id === id);
+            return p ? p.name : 'Desconocido';
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('tennis_doubles_app_state', JSON.stringify(appState));
+            } catch (e) {
+                console.error('Error al guardar estado:', e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('tennis_doubles_app_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    appState = { ...appState, ...parsed };
+                }
+            } catch (e) {
+                console.error('Error al cargar estado:', e);
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- MODAL PERSONALIZADO (Evitamos alert nativo) ---
+        let currentModalCallback = null;
+
+        function showModal(title, message, onConfirm = null) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            currentModalCallback = onConfirm;
+
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('modal-box');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+                box.classList.add('scale-100');
+            }, 10);.getElementById('modal-box');
+            
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (currentModalCallback) {
+                    const cb = currentModalCallback;
+                    currentModalCallback = null;
+                    cb();
+                }
+            }, 200);
+        }
+    </script>
+</body>
+</html>
